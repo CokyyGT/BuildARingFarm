@@ -23,11 +23,6 @@ local EGG_EMOJI={CommonEgg="<:Common:1514990825715798136>",RareEgg="<:rare:15149
 local START=os.time()
 local RestockCount=0
 
--- ══════════════════════════════════════
---  Tunggu data gear shop BENERAN stabil
---  (didefinisikan di bawah, setelah scanGear)
--- ══════════════════════════════════════
-
 local function uptime()
 	local e=os.time()-START
 	local h,m,s=math.floor(e/3600),math.floor((e%3600)/60),e%60
@@ -239,5 +234,18 @@ RT:GetPropertyChangedSignal("Text"):Connect(function()
 	end
 end)
 
+local function sendActivated()
+	pcall(function()
+		Req({Url=WEBHOOK.."?wait=true",Method="POST",Headers={["Content-Type"]="application/json"},
+		Body=HttpService:JSONEncode({embeds={{
+			title="🟢 Shop Monitor Activated",
+			description="👤 **Player:** "..Player.Name.."\n🕐 **Waktu:** "..wib(),
+			color=3066993,
+			footer={text="© Coky • Build A Ring Farm"},
+			timestamp=ts()
+		}}})})
+	end)
+end
+
+sendActivated()
 print("✅ Shop Monitor Started | © Coky")
-print("⏳ Menunggu restock pertama, belum ada webhook dikirim...")
