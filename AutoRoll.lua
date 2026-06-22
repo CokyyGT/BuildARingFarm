@@ -47,7 +47,7 @@ local SEED_NAMES = {
     { name = "Durian",              enabled = false },
     { name = "Silver Artichoke",    enabled = false },
     { name = "Dragon Scale Aloe",   enabled = false },
-    { name = "Elder Dragonroot",    enabled = false }
+    { name = "Elder Dragonroot",    enabled = false },
     { name = "Pepper",     enabled = false },
     { name = "Void Fruit",  enabled = false }
 }
