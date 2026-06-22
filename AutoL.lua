@@ -38,21 +38,22 @@ local TARGET_RARITIES  = {}
 -- Target seed by name (OR dengan rarity)
 local SEED_NAMES = {
     { name = "Godspore",            enabled = false },
-        { name = "Seraphim Spire",      enabled = false },
+    { name = "Sundrop Seraphina",   enabled = false },
+    { name = "Seraphim Spire",      enabled = false },
     { name = "Aethercoil",          enabled = false },
     { name = "Obsidian Figwort",    enabled = false },
     { name = "Voidglass Heliconia", enabled = false },
-        { name = "Titan Arum",          enabled = false },
+    { name = "Solstice Snapdragon", enabled = false },
+    { name = "Titan Arum",          enabled = false },
     { name = "Aurora Lotus",        enabled = false },
     { name = "Ember Fruit",         enabled = false },
-        { name = "Ghost Pepper",        enabled = false },
+    { name = "Tideglass Orchid",    enabled = false },
+    { name = "Ghost Pepper",        enabled = false },
     { name = "Papaya",              enabled = false },
     { name = "Durian",              enabled = false },
     { name = "Silver Artichoke",    enabled = false },
     { name = "Dragon Scale Aloe",   enabled = false },
     { name = "Elder Dragonroot",    enabled = false },
-    { name = "Pepper",     enabled = false },
-    { name = "Void Fruit",  enabled = false }
 }
 local TARGET_SEED_NAMES = {}
 for _, s in ipairs(SEED_NAMES) do
@@ -61,8 +62,6 @@ end
 
 local ROLL_DELAY       = 2
 local SEED_WAIT        = 6
-local WEBHOOK_URL      = ""
-local WEBHOOK_ENABLED  = false
 for _, r in ipairs(RARITIES) do
     TARGET_RARITIES[r.name] = r.enabled
 end
@@ -113,12 +112,11 @@ local function LoadConfig()
     end
     if data.roll_delay then ROLL_DELAY = data.roll_delay end
     if data.seed_wait  then SEED_WAIT  = data.seed_wait  end
-    if data.webhook_url     ~= nil then WEBHOOK_URL     = data.webhook_url     end
+    if data.webhook_url     then WEBHOOK_URL     = data.webhook_url     end
     if data.webhook_enabled ~= nil then WEBHOOK_ENABLED = data.webhook_enabled end
 end
 
--- Load saved config (WEBHOOK_URL & WEBHOOK_ENABLED sudah ada di scope ini)
-LoadConfig()
+
 
 -- ══════════════════════════════════════
 --           STATE
