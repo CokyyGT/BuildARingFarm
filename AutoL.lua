@@ -62,6 +62,8 @@ end
 
 local ROLL_DELAY       = 2
 local SEED_WAIT        = 6
+local WEBHOOK_URL      = ""
+local WEBHOOK_ENABLED  = false
 for _, r in ipairs(RARITIES) do
     TARGET_RARITIES[r.name] = r.enabled
 end
@@ -112,11 +114,12 @@ local function LoadConfig()
     end
     if data.roll_delay then ROLL_DELAY = data.roll_delay end
     if data.seed_wait  then SEED_WAIT  = data.seed_wait  end
-    if data.webhook_url     then WEBHOOK_URL     = data.webhook_url     end
+    if data.webhook_url     ~= nil then WEBHOOK_URL     = data.webhook_url     end
     if data.webhook_enabled ~= nil then WEBHOOK_ENABLED = data.webhook_enabled end
 end
 
-
+-- Load saved config (WEBHOOK_URL & WEBHOOK_ENABLED sudah ada di scope ini)
+LoadConfig()
 
 -- ══════════════════════════════════════
 --           STATE
