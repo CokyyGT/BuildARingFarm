@@ -1,8 +1,3 @@
--- Cleanup
-if game.CoreGui:FindFirstChild("AutoRollUI") then
-    game.CoreGui.AutoRollUI:Destroy()
-end
-
 local Players    = game:GetService("Players")
 local UIS        = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
