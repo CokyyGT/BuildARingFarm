@@ -1,4 +1,7 @@
-
+-- Cleanup
+if game.CoreGui:FindFirstChild("AutoRollUI") then
+    game.CoreGui.AutoRollUI:Destroy()
+end
 
 local Players    = game:GetService("Players")
 local UIS        = game:GetService("UserInputService")
@@ -35,21 +38,22 @@ local TARGET_RARITIES  = {}
 -- Target seed by name (OR dengan rarity)
 local SEED_NAMES = {
     { name = "Godspore",            enabled = false },
-        { name = "Seraphim Spire",      enabled = false },
+    { name = "Sundrop Seraphina",   enabled = false },
+    { name = "Seraphim Spire",      enabled = false },
     { name = "Aethercoil",          enabled = false },
     { name = "Obsidian Figwort",    enabled = false },
     { name = "Voidglass Heliconia", enabled = false },
-        { name = "Titan Arum",          enabled = false },
+    { name = "Solstice Snapdragon", enabled = false },
+    { name = "Titan Arum",          enabled = false },
     { name = "Aurora Lotus",        enabled = false },
     { name = "Ember Fruit",         enabled = false },
-        { name = "Ghost Pepper",        enabled = false },
+    { name = "Tideglass Orchid",    enabled = false },
+    { name = "Ghost Pepper",        enabled = false },
     { name = "Papaya",              enabled = false },
     { name = "Durian",              enabled = false },
     { name = "Silver Artichoke",    enabled = false },
     { name = "Dragon Scale Aloe",   enabled = false },
     { name = "Elder Dragonroot",    enabled = false },
-    { name = "Pepper",     enabled = false },
-    { name = "Void Fruit",  enabled = false }
 }
 local TARGET_SEED_NAMES = {}
 for _, s in ipairs(SEED_NAMES) do
@@ -87,7 +91,7 @@ local function SaveConfig()
     end)
 end
 
-local function pcall(function() LoadConfig() end)
+local function LoadConfig()
     local ok, raw = pcall(readfile, CONFIG_FILE)
     if not ok or not raw then return end
     local ok2, data = pcall(HttpService.JSONDecode, HttpService, raw)
@@ -115,7 +119,7 @@ local function pcall(function() LoadConfig() end)
 end
 
 -- Load saved config (WEBHOOK_URL & WEBHOOK_ENABLED sudah ada di scope ini)
-pcall(function() LoadConfig() end)
+LoadConfig()
 
 -- ══════════════════════════════════════
 --           STATE
