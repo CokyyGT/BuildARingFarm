@@ -180,6 +180,8 @@ local HourlyOther  = {}
 local HourlyTotal  = 0
 local HourlyRarity = {}   -- tracking rarity yang diBeli
 local HourlyRarityRolled = {}  -- tracking rarity yang di-roll
+local HourlyLucky = {clover2=0, clover4=0, clover8=0, clover16=0, jackpot=0}
+local SessionStartBalance = nil
 local LastCrateMoney = nil
 
 local function GetRarityEmoji(rarity)
@@ -424,6 +426,8 @@ local function SendAutoReport()
             {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**", inline=false},
             {name="✨ Rarity Bought", value=rarityBoughtText, inline=false},
             {name="🌟 Rarity Rolled", value=rarityRolledText, inline=false},
+            {name="💰 Earnings", value="Before: "..tostring(SessionStartBalance).."\nCurrent: "..GetPlayerMoney().."\nProfit: +"..tostring(math.max(0, tonumber((GetPlayerMoney() or "0"):gsub("[^0-9]", "")) or 0) - (SessionStartBalance or 0)), inline=false},
+            {name="🍀 Lucky Rate", value="2x: "..math.floor((HourlyLucky.clover2/(TotalRolls+1))*100).."%\n4x: "..math.floor((HourlyLucky.clover4/(TotalRolls+1))*100).."%\n8x: "..math.floor((HourlyLucky.clover8/(TotalRolls+1))*100).."%\n16x: "..math.floor((HourlyLucky.clover16/(TotalRolls+1))*100).."%", inline=false},
             {name="🎁 Top Seeds", value=topSeedsText, inline=false},
         },
         footer = {text = "👤 "..Player.Name.." • Auto Roll • Report every 30min"},
@@ -563,7 +567,7 @@ local function SendHourlyReport()
         footer = { text = "Build A Ring Farm  •  Auto Roll" },
         timestamp = DateTime.now():ToIsoDate()
     }}})
-    HourlyGear = {}; HourlyPet = {}; HourlySeed = {}; HourlyOther = {}; HourlyTotal = 0; HourlyRarity = {}; HourlyRarityRolled = {}
+    HourlyGear = {}; HourlyPet = {}; HourlySeed = {}; HourlyOther = {}; HourlyTotal = 0; HourlyRarity = {}; HourlyRarityRolled = {}; HourlyLucky = {clover2=0, clover4=0, clover8=0, clover16=0, jackpot=0}
 end
 
 local function SendActivated()
@@ -1779,12 +1783,13 @@ local function RunLoop()
 
     local function BuySeedList(seedList)
         local gotTarget = false
-        -- Track semua rarity yang muncul di roll ini
+        -- Track rarity rolled (semua yang muncul)
         for _, seed in ipairs(seedList) do
             if seed.rarity and seed.rarity ~= "" then
-                HourlyRarity[seed.rarity] = (HourlyRarity[seed.rarity] or 0) + 1
+                HourlyRarityRolled[seed.rarity] = (HourlyRarityRolled[seed.rarity] or 0) + 1
             end
         end
+        -- Track rarity bought & lucky (hanya target + successful)
         for _, seed in ipairs(seedList) do
             if IsTarget(seed) then
                 addLog("🌟 " .. seed.name .. " [" .. seed.rarity .. "]!", C.gold)
@@ -1799,6 +1804,7 @@ local function RunLoop()
                     statBought.Text = tostring(TotalBought)
                     addLog("✅ Beli " .. seed.name, C.green)
                     gotTarget = true
+                    HourlyRarity[seed.rarity] = (HourlyRarity[seed.rarity] or 0) + 1
                 else
                     addLog("⚠ Gagal beli " .. seed.name, C.yellow)
                 end
@@ -1934,6 +1940,7 @@ if Running and not _G.AutoRollResumed then
         runBtn.BackgroundColor3 = C.red
         statusDot.TextColor3 = C.green
         addLog("⚡ Auto Resume Aktif!", C.gold)
+                SessionStartBalance = tonumber((GetPlayerMoney() or "0"):gsub("[^0-9]", "")) or 0
         task.spawn(RunLoop)
     end)
 end
