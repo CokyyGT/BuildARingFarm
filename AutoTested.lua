@@ -1497,40 +1497,50 @@ local runBtn = mkBtn(runWrap, {
 --           DRAG
 -- ══════════════════════════════════════
 local dragging, dragStart, startPos
-local lastInput = nil
+local headerBounds = nil
 
-header.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = inp.Position
-        startPos = main.Position
-        lastInput = inp
-        
-        -- For Touch: connect to the input object's Move event
-        if inp.UserInputType == Enum.UserInputType.Touch then
-            local touchConn
-            touchConn = inp.TouchMoved:Connect(function(touchPos)
-                if dragging and lastInput == inp then
-                    local delta = touchPos.Position - dragStart
-                    main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                end
-            end)
-        end
+-- Update header bounds setiap frame (untuk touch detection)
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        headerBounds = {
+            x0 = header.AbsolutePosition.X,
+            x1 = header.AbsolutePosition.X + header.AbsoluteSize.X,
+            y0 = header.AbsolutePosition.Y,
+            y1 = header.AbsolutePosition.Y + header.AbsoluteSize.Y
+        }
     end
 end)
 
--- For Mouse: use InputChanged as before
-UIS.InputChanged:Connect(function(inp)
-    if dragging and lastInput and inp.UserInputType == Enum.UserInputType.MouseMovement then
+-- Check if touch/mouse di header
+local function isTouchingHeader(pos)
+    if not headerBounds then return false end
+    return pos.X >= headerBounds.x0 and pos.X <= headerBounds.x1 and
+           pos.Y >= headerBounds.y0 and pos.Y <= headerBounds.y1
+end
+
+-- InputBegan - start drag
+UIS.InputBegan:Connect(function(inp, gameProc)
+    if gameProc then return end
+    if (inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch) and isTouchingHeader(inp.Position) then
+        dragging = true
+        dragStart = inp.Position
+        startPos = main.Position
+    end
+end)
+
+-- InputChanged - update drag
+UIS.InputChanged:Connect(function(inp, gameProc)
+    if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
         local delta = inp.Position - dragStart
         main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 
-UIS.InputEnded:Connect(function(inp)
-    if lastInput == inp then
+-- InputEnded - stop drag
+UIS.InputEnded:Connect(function(inp, gameProc)
+    if (inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch) then
         dragging = false
-        lastInput = nil
     end
 end)
 
