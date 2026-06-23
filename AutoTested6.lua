@@ -178,7 +178,8 @@ local HourlyPet    = {}
 local HourlySeed   = {}
 local HourlyOther  = {}
 local HourlyTotal  = 0
-local HourlyRarity = {}   -- tracking rarity yang muncul saat roll
+local HourlyRarity = {}   -- tracking rarity yang diBeli
+local HourlyRarityRolled = {}  -- tracking rarity yang di-roll
 local LastCrateMoney = nil
 
 local function GetRarityEmoji(rarity)
@@ -379,26 +380,40 @@ local function SendAutoReport()
     local uptime = GetUptime()
     local hpm = TotalRolls > 0 and math.floor((TotalBought / TotalRolls) * 100) or 0
     
-    -- Build rarity progress (simple text for now)
-    local rarityText = ""
-    for rarity, count in pairs(HourlyRarity) do
-        if count > 0 then
-            rarityText = rarityText .. rarity .. ": " .. count .. "  "
+    -- Get top seeds dari HourlySeed
+    local topSeeds = {}
+    local seedData = {}
+    if HourlySeed then
+        for seedName, count in pairs(HourlySeed) do
+            if count > 0 then
+                table.insert(seedData, {name=seedName, count=count})
+            end
+        end
+        table.sort(seedData, function(a,b) return a.count > b.count end)
+        for i=1, math.min(5, #seedData) do
+            topSeeds[i] = seedData[i].name .. " x" .. seedData[i].count
         end
     end
     
-    -- Get top seeds
-    local topSeeds = {}
-    local seedData = {}
-    for seed, bought in pairs(HourlyRarityRolled) do
-        table.insert(seedData, {name=seed, count=bought})
-    end
-    table.sort(seedData, function(a,b) return a.count > b.count end)
-    for i=1, math.min(5, #seedData) do
-        topSeeds[i] = seedData[i].name .. " x" .. seedData[i].count
-    end
+    local topSeedsText = (#topSeeds > 0) and table.concat(topSeeds, "\n") or "None"
     
-    local topSeedsText = table.concat(topSeeds, "\n") or "None"
+    -- Build rarity bought & rolled text
+    local rarityBoughtText = ""
+    local rarityRolledText = ""
+    
+    for rarity, count in pairs(HourlyRarity) do
+        if count > 0 then
+            rarityBoughtText = rarityBoughtText .. rarity .. ": **" .. count .. "** "
+        end
+    end
+    rarityBoughtText = (rarityBoughtText ~= "") and rarityBoughtText or "None"
+    
+    for rarity, count in pairs(HourlyRarityRolled) do
+        if count > 0 then
+            rarityRolledText = rarityRolledText .. rarity .. ": **" .. count .. "** "
+        end
+    end
+    rarityRolledText = (rarityRolledText ~= "") and rarityRolledText or "None"
     
     local embed = {
         title = "🎰 Auto Roll 30-Min Report",
@@ -407,7 +422,9 @@ local function SendAutoReport()
         fields = {
             {name="📊 Stats", value="Rolls: **"..TotalRolls.."**\nBought: **"..TotalBought.."**\nHit Rate: **"..hpm.."%**", inline=false},
             {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**", inline=false},
-            {name="🌟 Top Seeds", value=topSeedsText, inline=false},
+            {name="✨ Rarity Bought", value=rarityBoughtText, inline=false},
+            {name="🌟 Rarity Rolled", value=rarityRolledText, inline=false},
+            {name="🎁 Top Seeds", value=topSeedsText, inline=false},
         },
         footer = {text = "👤 "..Player.Name.." • Auto Roll • Report every 30min"},
         timestamp = DateTime.now():ToIsoDate()
@@ -546,7 +563,7 @@ local function SendHourlyReport()
         footer = { text = "Build A Ring Farm  •  Auto Roll" },
         timestamp = DateTime.now():ToIsoDate()
     }}})
-    HourlyGear = {}; HourlyPet = {}; HourlySeed = {}; HourlyOther = {}; HourlyTotal = 0; HourlyRarity = {}
+    HourlyGear = {}; HourlyPet = {}; HourlySeed = {}; HourlyOther = {}; HourlyTotal = 0; HourlyRarity = {}; HourlyRarityRolled = {}
 end
 
 local function SendActivated()
@@ -779,6 +796,8 @@ local function ScanSeeds()
                 rarity = rarity.Text,
                 prompt = buySeed,
             })
+            -- Track rarity rolled
+            HourlyRarityRolled[rarity.Text] = (HourlyRarityRolled[rarity.Text] or 0) + 1
         end
     end
     return seeds
