@@ -150,21 +150,6 @@ end
 local myPlot      = nil
 local rollPrompt  = nil
 
-
-local function FormatEarnings(amount)
-    if not amount then return "0" end
-    if amount >= 1e30 then return string.format("%.1f", amount/1e30).."No"
-    elseif amount >= 1e27 then return string.format("%.1f", amount/1e27).."Oc"
-    elseif amount >= 1e24 then return string.format("%.1f", amount/1e24).."Sp"
-    elseif amount >= 1e21 then return string.format("%.1f", amount/1e21).."Sx"
-    elseif amount >= 1e18 then return string.format("%.1f", amount/1e18).."Qn"
-    elseif amount >= 1e15 then return string.format("%.1f", amount/1e15).."Qa"
-    elseif amount >= 1e12 then return string.format("%.1f", amount/1e12).."T"
-    elseif amount >= 1e9 then return string.format("%.1f", amount/1e9).."B"
-    elseif amount >= 1e6 then return string.format("%.1f", amount/1e6).."M"
-    else return string.format("%.0f", amount) end
-end
-
 local function GetWIB()
     local u = DateTime.now():ToUniversalTime()
     return string.format("%02d:%02d WIB", (u.Hour+7)%24, u.Minute)
@@ -195,9 +180,8 @@ local HourlyOther  = {}
 local HourlyTotal  = 0
 local HourlyRarity = {}   -- tracking rarity yang diBeli
 local HourlyRarityRolled = {}  -- tracking rarity yang di-roll
-local LuckyClover = 1  -- Current clover level (1=none, 2=2x, 4=4x, 8=8x, 16=16x)
-local HourlyLucky = {clover2=0, clover4=0, clover8=0, clover16=0, jackpot=0}  -- Track luck frequency
-local SessionStartBalance = nil  -- Track starting balance
+local HourlyLucky = {clover2=0, clover4=0, clover8=0, clover16=0, jackpot=0}
+local SessionStartBalance = nil
 local LastCrateMoney = nil
 
 local function GetRarityEmoji(rarity)
@@ -392,40 +376,6 @@ end
 -- ══════════════════════════════════════
 local lastReportTime = os.time()
 
-
--- ══════════════════════════════════════
---        LUCK ALERT (Webhook)
--- ══════════════════════════════════════
-local function SendLuckyAlert(clovers, result)
-    if not WEBHOOK_URL or WEBHOOK_URL == "" then return end
-    
-    local title = ""
-    if clovers == 2 then title = "🍀 Got 2x Clover!"
-    elseif clovers == 4 then title = "🍀🍀 Got 4x Clover!"
-    elseif clovers == 8 then title = "🍀🍀🍀 Got 8x Clover!"
-    elseif clovers == 16 then title = "🍀🍀🍀🍀 Got 16x Clover!"
-    elseif clovers == "jackpot" then title = "🎰 JACKPOT! Got "..result.."!"
-    end
-    
-    if title == "" then return end
-    
-    local embed = {
-        title = title,
-        color = 5763719,
-        footer = {text = "👤 "..Player.Name.." • "..GetWIB()},
-        timestamp = DateTime.now():ToIsoDate()
-    }
-    
-    pcall(function()
-        Request({
-            Url = WEBHOOK_URL,
-            Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = HttpService:JSONEncode({embeds = {embed}})
-        })
-    end)
-end
-
 local function SendAutoReport()
     if not WEBHOOK_URL or WEBHOOK_URL == "" then return end
     
@@ -473,16 +423,12 @@ local function SendAutoReport()
         color = 5763719,
         fields = {
             {name="📊 Stats", value="Rolls: **"..TotalRolls.."**\nBought: **"..TotalBought.."**\nHit Rate: **"..hpm.."%**", inline=false},
-            {name="💰 Earnings", value="Before: **"..FormatEarnings(SessionStartBalance).."**\nCurrent: **"..GetPlayerMoney().."**\nProfit: **+"..FormatEarnings(math.max(0, tonumber(GetPlayerMoney():gsub("[^0-9]", "")) or 0) - SessionStartBalance).."**", inline=false},
-            {name="⏱ Session Time", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**", inline=false},
+            {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**", inline=false},
             {name="✨ Rarity Bought", value=rarityBoughtText, inline=false},
             {name="🌟 Rarity Rolled", value=rarityRolledText, inline=false},
+            {name="💰 Earnings", value="Before: "..tostring(SessionStartBalance).."\nCurrent: "..GetPlayerMoney().."\nProfit: +"..tostring(math.max(0, tonumber((GetPlayerMoney() or "0"):gsub("[^0-9]", "")) or 0) - (SessionStartBalance or 0)), inline=false},
+            {name="🍀 Lucky Rate", value="2x: "..math.floor((HourlyLucky.clover2/(TotalRolls+1))*100).."%\n4x: "..math.floor((HourlyLucky.clover4/(TotalRolls+1))*100).."%\n8x: "..math.floor((HourlyLucky.clover8/(TotalRolls+1))*100).."%\n16x: "..math.floor((HourlyLucky.clover16/(TotalRolls+1))*100).."%", inline=false},
             {name="🎁 Top Seeds", value=topSeedsText, inline=false},
-            {name="🍀 Lucky Clover Rate", value="2x: "..math.floor((HourlyLucky.clover2/(TotalRolls+1))*100).."%
-4x: "..math.floor((HourlyLucky.clover4/(TotalRolls+1))*100).."%
-8x: "..math.floor((HourlyLucky.clover8/(TotalRolls+1))*100).."%
-16x: "..math.floor((HourlyLucky.clover16/(TotalRolls+1))*100).."%
-Jackpot: "..math.floor((HourlyLucky.jackpot/(TotalRolls+1))*100).."%", inline=false},
         },
         footer = {text = "👤 "..Player.Name.." • Auto Roll • Report every 30min"},
         timestamp = DateTime.now():ToIsoDate()
@@ -854,6 +800,8 @@ local function ScanSeeds()
                 rarity = rarity.Text,
                 prompt = buySeed,
             })
+            -- Track rarity rolled
+            HourlyRarityRolled[rarity.Text] = (HourlyRarityRolled[rarity.Text] or 0) + 1
         end
     end
     return seeds
@@ -1841,7 +1789,7 @@ local function RunLoop()
                 HourlyRarityRolled[seed.rarity] = (HourlyRarityRolled[seed.rarity] or 0) + 1
             end
         end
-        -- Track rarity bought (hanya yang target + berhasil dibeli)
+        -- Track rarity bought & lucky (hanya target + successful)
         for _, seed in ipairs(seedList) do
             if IsTarget(seed) then
                 addLog("🌟 " .. seed.name .. " [" .. seed.rarity .. "]!", C.gold)
@@ -1856,7 +1804,6 @@ local function RunLoop()
                     statBought.Text = tostring(TotalBought)
                     addLog("✅ Beli " .. seed.name, C.green)
                     gotTarget = true
-                    -- Track rarity bought (hanya saat successful)
                     HourlyRarity[seed.rarity] = (HourlyRarity[seed.rarity] or 0) + 1
                 else
                     addLog("⚠ Gagal beli " .. seed.name, C.yellow)
@@ -1993,10 +1940,10 @@ if Running and not _G.AutoRollResumed then
         runBtn.BackgroundColor3 = C.red
         statusDot.TextColor3 = C.green
         addLog("⚡ Auto Resume Aktif!", C.gold)
+                SessionStartBalance = tonumber((GetPlayerMoney() or "0"):gsub("[^0-9]", "")) or 0
         task.spawn(RunLoop)
     end)
 end
-
 
 runBtn.MouseButton1Click:Connect(function()
     Running = not Running
@@ -2004,9 +1951,6 @@ runBtn.MouseButton1Click:Connect(function()
         runBtn.Text             = "⏹  Stop"
         runBtn.BackgroundColor3 = C.red
         statusDot.TextColor3    = C.green
-        -- Initialize session balance (player wallet money)
-        local moneyStr = GetPlayerMoney()
-        SessionStartBalance = tonumber(moneyStr:gsub("[^0-9]", "")) or 0
         task.spawn(RunLoop)
     else
         runBtn.Text             = "▶  Start Auto Roll"
