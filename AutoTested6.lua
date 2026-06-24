@@ -1975,6 +1975,7 @@ runBtn.MouseButton1Click:Connect(function()
         runBtn.BackgroundColor3 = C.red
         statusDot.TextColor3    = C.green
         SessionStartBalance     = ParseMoney(GetPlayerMoney())
+        lastReportTime          = os.time()  -- Reset 30-min counter
         task.spawn(RunLoop)
     else
         runBtn.Text             = "▶  Start Auto Roll"
