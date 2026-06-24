@@ -458,7 +458,7 @@ local function SendAutoReport()
     end)
 end
 
--- Auto-report every 30 minutes
+-- Auto-report every 30 minutes (skip at hour marks)
 task.spawn(function()
     while true do
         task.wait(1)
