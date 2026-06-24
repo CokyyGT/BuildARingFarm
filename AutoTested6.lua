@@ -212,7 +212,7 @@ local function GetEmoji(name)
     if lower:find("mammoth")        then return "<:Mammoth:1514891081509113946>"
     elseif lower:find("hydra")      then return "<:Hydra:1514891118180044821>"
     elseif lower:find("Aether Coil") then return "<:Aethercoil:1519032981463765002>"
-    elseif lower:find("Seraphim Spire") then return "<:StarlightCamellia:1519033086845648916>"
+    elseif lower:find("Seraphim Spire") then return "<:SeraphimSpire:1519033036597891215>"
     elseif lower:find("Starligh Camellia")  then return "<:StarlightCamellia:1519033086845648916>"
     elseif lower:find("rainbow spray") then return "<:Rainbow:1514892436747321394>"
     elseif lower:find("cosmic spray")  then return "<:Cosmic:1514892463695859812>"
@@ -425,10 +425,13 @@ local function SendAutoReport()
             {name="📊 Stats", value="Rolls: **"..TotalRolls.."**\nBought: **"..TotalBought.."**\nHit Rate: **"..hpm.."%**", inline=false},
             {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**", inline=false},
             {name="✨ Rarity Bought", value=rarityBoughtText, inline=false},
+            {name="💰 Earnings", value="Before: "..tostring(SessionStartBalance).."\nCurrent: "..GetPlayerMoney(), inline=false},
             {name="🌟 Rarity Rolled", value=rarityRolledText, inline=false},
+            
             {name="💰 Earnings", value="Before: "..tostring(SessionStartBalance).."\nCurrent: "..GetPlayerMoney().."\nProfit: +"..tostring(math.max(0, tonumber((GetPlayerMoney() or "0"):gsub("[^0-9]", "")) or 0) - (SessionStartBalance or 0)), inline=false},
             {name="🍀 Lucky Rate", value="2x: "..math.floor((HourlyLucky.clover2/(TotalRolls+1))*100).."%\n4x: "..math.floor((HourlyLucky.clover4/(TotalRolls+1))*100).."%\n8x: "..math.floor((HourlyLucky.clover8/(TotalRolls+1))*100).."%\n16x: "..math.floor((HourlyLucky.clover16/(TotalRolls+1))*100).."%", inline=false},
             {name="🎁 Top Seeds", value=topSeedsText, inline=false},
+            {name="🍀 Lucky Rate", value="2x: "..math.floor((HourlyLucky.clover2/(math.max(TotalRolls,1)))*100).."%\n4x: "..math.floor((HourlyLucky.clover4/(math.max(TotalRolls,1)))*100).."%\n8x: "..math.floor((HourlyLucky.clover8/(math.max(TotalRolls,1)))*100).."%\n16x: "..math.floor((HourlyLucky.clover16/(math.max(TotalRolls,1)))*100).."%\nJackpot: "..math.floor((HourlyLucky.jackpot/(math.max(TotalRolls,1)))*100).."%", inline=false},
         },
         footer = {text = "👤 "..Player.Name.." • Auto Roll • Report every 30min"},
         timestamp = DateTime.now():ToIsoDate()
@@ -543,13 +546,13 @@ local function SendHourlyReport()
     }
     local rarityLines = {}
     for _, rName in ipairs(rarityOrder) do
-        local count = HourlyRarity[rName]
+        local count = HourlyRarityRolled[rName]
         if count and count > 0 then
             table.insert(rarityLines, GetRarityEmoji(rName).." **"..rName.."** `"..count.."x`")
         end
     end
     -- Rarity yang tidak ada di order list (jaga-jaga nama baru)
-    for rName, count in pairs(HourlyRarity) do
+    for rName, count in pairs(HourlyRarityRolled) do
         local found = false
         for _, o in ipairs(rarityOrder) do if o == rName then found = true break end end
         if not found and count > 0 then
@@ -788,6 +791,16 @@ end
 -- ══════════════════════════════════════
 --           SCAN SEEDS
 -- ══════════════════════════════════════
+
+local function FindBonusObject()
+    local BONUS_OBJECTS = {"2xClover","4xClover","8xClover","16xClover","Jackpot"}
+    for _, name in ipairs(BONUS_OBJECTS) do
+        local obj = workspace:FindFirstChild(name)
+        if obj then return obj.Name end
+    end
+    return nil
+end
+
 local function ScanSeeds()
     local seeds = {}
     for _, v in ipairs(workspace:GetChildren()) do
@@ -1818,7 +1831,18 @@ local function RunLoop()
         -- Roll
         local ok, _ = FirePrompt(rollPrompt)
         if ok then
-            TotalRolls = TotalRolls + 1
+            
+        -- Detect lucky clover
+        local bonusObj = FindBonusObject()
+        if bonusObj then
+            if bonusObj == "2xClover" then HourlyLucky.clover2 = HourlyLucky.clover2 + 1
+            elseif bonusObj == "4xClover" then HourlyLucky.clover4 = HourlyLucky.clover4 + 1
+            elseif bonusObj == "8xClover" then HourlyLucky.clover8 = HourlyLucky.clover8 + 1
+            elseif bonusObj == "16xClover" then HourlyLucky.clover16 = HourlyLucky.clover16 + 1
+            elseif bonusObj == "Jackpot" then HourlyLucky.jackpot = HourlyLucky.jackpot + 1 end
+        end
+
+        TotalRolls = TotalRolls + 1
             statRolls.Text = tostring(TotalRolls)
             addLog("Roll #" .. TotalRolls, C.muted)
         else
