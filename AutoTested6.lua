@@ -155,6 +155,19 @@ local function GetWIB()
     return string.format("%02d:%02d WIB", (u.Hour+7)%24, u.Minute)
 end
 
+
+local function GetPingStatus()
+    local ping = math.floor(AvgPing)
+    if ping < 100 then return "🟢 "..ping.."ms"
+    elseif ping < 200 then return "🟡 "..ping.."ms"
+    else return "🔴 "..ping.."ms" end
+end
+
+local function UpdatePing(ms)
+    AvgPing = (AvgPing * PingCount + ms) / (PingCount + 1)
+    PingCount = PingCount + 1
+end
+
 local function GetUptime()
     local e = os.time() - StartTime
     return string.format("%02d:%02d:%02d",
@@ -183,6 +196,8 @@ local HourlyRarityRolled = {}  -- tracking rarity yang di-roll
 local HourlyLucky = {clover2=0, clover4=0, clover8=0, clover16=0, jackpot=0}
 local SessionStartBalance = nil
 local LastCrateMoney = nil
+local AvgPing = 0  -- Average ping in ms
+local PingCount = 0
 
 local function GetRarityEmoji(rarity)
     local r = rarity:lower()
@@ -203,13 +218,15 @@ end
 
 local RARE_ITEMS = {
     ["Seraphim"] = "<@&1519037882247938088>",
-    ["Aether"]     = "<@&1519037882247938088>",
+    ["Aether"]   = "<@&1519037882247938088>",
     ["Starlight"] = "<@&1519037882247938088>"
 }
 
 local function GetEmoji(name)
     local lower = name:lower()
-    if lower:find("mammoth")        then return "<:Mammoth:1514891081509113946>"
+    -- Check specific combinations first (before generic "hydra" match)
+    if lower:find("compost") then return "🌱"
+    elseif lower:find("mammoth")        then return "<:Mammoth:1514891081509113946>"
     elseif lower:find("hydra")      then return "<:Hydra:1514891118180044821>"
     elseif lower:find("aether") then return "<:Aethercoil:1519032981463765002>"
     elseif lower:find("seraphim") then return "<:SeraphimSpire:1519033036597891215>"
@@ -439,7 +456,7 @@ local function SendAutoReport()
         description = "Session Progress Update",
         color = 5763719,
         fields = {
-            {name="📊 Stats", value="Rolls: **"..TotalRolls.."**\nBought: **"..TotalBought.."**\nHit Rate: **"..hpm.."%**", inline=false},
+            {name="📊 Stats", value="Rolls: **"..TotalRolls.."**\nBought: **"..TotalBought.."**\nHit Rate: **"..hpm.."%**\nUptime: **"..uptime.."**\nTime: **"..GetWIB().."**\nPing: **"..GetPingStatus().."**", inline=false},
             {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**\nBefore: **"..FormatMoney(startNum).."**\nCurrent: **"..currentMoney.."**\nProfit: **"..(profitNum >= 0 and "+" or "")..FormatMoney(profitNum).."**", inline=false},
             {name="✨ Rarity Bought", value=rarityBoughtText, inline=false},
             {name="🍀 Lucky Rate", value="2x: **"..HourlyLucky.clover2.."** ("..math.floor((HourlyLucky.clover2/totalR)*100).."%)\n4x: **"..HourlyLucky.clover4.."** ("..math.floor((HourlyLucky.clover4/totalR)*100).."%)\n8x: **"..HourlyLucky.clover8.."** ("..math.floor((HourlyLucky.clover8/totalR)*100).."%)\n16x: **"..HourlyLucky.clover16.."** ("..math.floor((HourlyLucky.clover16/totalR)*100).."%)\nJackpot: **"..HourlyLucky.jackpot.."** ("..math.floor((HourlyLucky.jackpot/totalR)*100).."%)", inline=false},
@@ -458,23 +475,25 @@ local function SendAutoReport()
     end)
 end
 
--- Auto-report every 30 minutes (skip at hour marks)
+-- Auto-report every 30 minutes (30min sends FIRST, then 1hour)
 task.spawn(function()
     while true do
         task.wait(1)
         if Running and os.time() - lastReportTime >= 1800 then  -- 1800 = 30 min
             SendAutoReport()
             lastReportTime = os.time()
+            task.wait(2)  -- Small delay biar 1-hour ga langsung trigger
         end
     end
 end)
 
 
 local function SendRareAlert(itemName, amount)
+    if not WEBHOOK_URL or WEBHOOK_URL == "" then return end  -- Only check webhook, not toggle
     local lower = itemName:lower()
     local mention = nil
     for keyword, role in pairs(RARE_ITEMS) do
-        if lower:find(keyword) then mention = role break end
+        if lower:find(keyword:lower()) then mention = role break end
     end
     if not mention then return end
     DoRequest({
@@ -524,21 +543,18 @@ local function SendHourlyReport()
     local cashMin = GetCashPerMin()
     local playerMoney = GetPlayerMoney()
     local estHour = EstPerHour(cashMin)
-    local crateChange = ""
-    if LastCrateMoney and LastCrateMoney ~= "N/A" and crate ~= "N/A" then
-        crateChange = "\n📈 1 hour ago: `"..LastCrateMoney.."` → `"..crate.."`"
-    end
-    LastCrateMoney = crate
+    LastCrateMoney = crate  -- Track for potential future use
     local gearLines, petLines, seedLines, otherLines = {}, {}, {}, {}
     for item, amt in pairs(HourlyGear)  do table.insert(gearLines,  GetEmoji(item).." **"..item.."** `"..amt.."x`") end
     for item, amt in pairs(HourlyPet)   do table.insert(petLines,   GetEmoji(item).." **"..item.."** `"..amt.."x`") end
     for item, amt in pairs(HourlySeed)  do table.insert(seedLines,  GetEmoji(item).." **"..item.."** `"..amt.."x`") end
     for item, amt in pairs(HourlyOther) do table.insert(otherLines, GetEmoji(item).." **"..item.."** `"..amt.."x`") end
     local sections = {}
-    table.insert(sections, "**👤 Player:** "..Player.Name.."  •  ⏱ `"..GetUptime().."`  •  🕐 `"..GetWIB().."`")
+    table.insert(sections, "**👤 Player:** "..Player.Name)
+    table.insert(sections, "**📊 Stats** • Uptime: `"..GetUptime().."`  •  Time: `"..GetWIB().."`  •  Ping: "..GetPingStatus())
     table.insert(sections, "")
     table.insert(sections, "**💵 Cash:** `"..playerMoney.."`")
-    table.insert(sections, "**💰 Crate:** `"..crate.."`"..crateChange)
+    table.insert(sections, "**💰 Crate:** `"..crate.."`")
     table.insert(sections, "**⚡ Cash/min:** `"..cashMin.."`  •  **💵 Est/hour:** `"..estHour.."`")
     table.insert(sections, "**🎲 Total Roll:** `"..TotalRolls.."`  •  **🌱 Bought:** `"..TotalBought.."`")
     table.insert(sections, "**📦 Total Item:** `"..HourlyTotal.." item`")
