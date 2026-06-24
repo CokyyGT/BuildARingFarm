@@ -409,22 +409,6 @@ local function SendAutoReport()
     local uptime = GetUptime()
     local hpm = TotalRolls > 0 and math.floor((TotalBought / TotalRolls) * 100) or 0
     
-    -- Get top seeds dari HourlySeed
-    local topSeeds = {}
-    local seedData = {}
-    if HourlySeed then
-        for seedName, count in pairs(HourlySeed) do
-            if count > 0 then
-                table.insert(seedData, {name=seedName, count=count})
-            end
-        end
-        table.sort(seedData, function(a,b) return a.count > b.count end)
-        for i=1, math.min(5, #seedData) do
-            topSeeds[i] = seedData[i].name .. " x" .. seedData[i].count
-        end
-    end
-    
-    local topSeedsText = (#topSeeds > 0) and table.concat(topSeeds, "\n") or "None"
     
     -- Build rarity bought & rolled text
     local rarityBoughtText = ""
@@ -459,7 +443,6 @@ local function SendAutoReport()
             {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**\nBefore: **"..FormatMoney(startNum).."**\nCurrent: **"..currentMoney.."**\nProfit: **"..(profitNum >= 0 and "+" or "")..FormatMoney(profitNum).."**", inline=false},
             {name="✨ Rarity Bought", value=rarityBoughtText, inline=false},
             {name="🍀 Lucky Rate", value="2x: **"..HourlyLucky.clover2.."** ("..math.floor((HourlyLucky.clover2/totalR)*100).."%)\n4x: **"..HourlyLucky.clover4.."** ("..math.floor((HourlyLucky.clover4/totalR)*100).."%)\n8x: **"..HourlyLucky.clover8.."** ("..math.floor((HourlyLucky.clover8/totalR)*100).."%)\n16x: **"..HourlyLucky.clover16.."** ("..math.floor((HourlyLucky.clover16/totalR)*100).."%)\nJackpot: **"..HourlyLucky.jackpot.."** ("..math.floor((HourlyLucky.jackpot/totalR)*100).."%)", inline=false},
-            {name="🎁 Top Seeds", value=topSeedsText, inline=false},
         },
         footer = {text = "👤 "..Player.Name.." • Auto Roll • Report every 30min"},
         timestamp = DateTime.now():ToIsoDate()
