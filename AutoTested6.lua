@@ -202,18 +202,18 @@ local function GetRarityEmoji(rarity)
 end
 
 local RARE_ITEMS = {
-    ["seraphimspire"] = "<@&1519037882247938088>",
-    ["Aethercoil"]     = "<@&1519037882247938088>",
-    ["starlightcamellia"] = "<@&1519037882247938088>",
+    ["Seraphim"] = "<@&1519037882247938088>",
+    ["Aether"]     = "<@&1519037882247938088>",
+    ["Starlight"] = "<@&1519037882247938088>"
 }
 
 local function GetEmoji(name)
     local lower = name:lower()
     if lower:find("mammoth")        then return "<:Mammoth:1514891081509113946>"
     elseif lower:find("hydra")      then return "<:Hydra:1514891118180044821>"
-    elseif lower:find("aethercoil") or lower:find("aether coil") then return "<:Aethercoil:1519032981463765002>"
-    elseif lower:find("seraphim spire") or lower:find("seraphimspire") then return "<:SeraphimSpire:1519033036597891215>"
-    elseif lower:find("starlight camellia") or lower:find("starlightcamellia") then return "<:StarlightCamellia:1519033086845648916>"
+    elseif lower:find("aether") then return "<:Aethercoil:1519032981463765002>"
+    elseif lower:find("seraphim") then return "<:SeraphimSpire:1519033036597891215>"
+    elseif lower:find("starlight") then return "<:StarlightCamellia:1519033086845648916>"
     elseif lower:find("rainbow spray") then return "<:Rainbow:1514892436747321394>"
     elseif lower:find("cosmic spray")  then return "<:Cosmic:1514892463695859812>"
     elseif lower:find("bubblegum spray") then return "<:Bubblegum:1514892495920824320>"
@@ -376,6 +376,33 @@ end
 -- ══════════════════════════════════════
 local lastReportTime = os.time()
 
+-- Parse money string dengan suffix (e.g. "$3.34Sp" → number)
+local function ParseMoney(str)
+    if not str or str == "N/A" then return 0 end
+    local clean = str:gsub("%$", ""):gsub(",", "")
+    local num, suffix = clean:match("([%d%.]+)([A-Za-z]*)")
+    if not num then return 0 end
+    local mult = {k=1e3,m=1e6,b=1e9,t=1e12,qa=1e15,qn=1e18,sx=1e21,sp=1e24,oc=1e27,no=1e30}
+    return tonumber(num) * (mult[suffix and suffix:lower()] or 1)
+end
+
+-- Format number ke string readable
+local function FormatMoney(n)
+    local abs = math.abs(n)
+    local sign = n < 0 and "-" or ""
+    if abs >= 1e30 then return sign..string.format("$%.2fNo", abs/1e30)
+    elseif abs >= 1e27 then return sign..string.format("$%.2fOc", abs/1e27)
+    elseif abs >= 1e24 then return sign..string.format("$%.2fSp", abs/1e24)
+    elseif abs >= 1e21 then return sign..string.format("$%.2fSx", abs/1e21)
+    elseif abs >= 1e18 then return sign..string.format("$%.2fQn", abs/1e18)
+    elseif abs >= 1e15 then return sign..string.format("$%.2fQa", abs/1e15)
+    elseif abs >= 1e12 then return sign..string.format("$%.2fT", abs/1e12)
+    elseif abs >= 1e9  then return sign..string.format("$%.2fB", abs/1e9)
+    elseif abs >= 1e6  then return sign..string.format("$%.2fM", abs/1e6)
+    elseif abs >= 1e3  then return sign..string.format("$%.2fK", abs/1e3)
+    else return sign..string.format("$%.0f", abs) end
+end
+
 local function SendAutoReport()
     if not WEBHOOK_URL or WEBHOOK_URL == "" then return end
     
@@ -419,8 +446,9 @@ local function SendAutoReport()
     
     local totalR = math.max(TotalRolls, 1)
     local currentMoney = GetPlayerMoney()
-    local currentNum = tonumber((currentMoney or "0"):gsub("[^0-9]", "")) or 0
-    local profit = math.max(0, currentNum - (SessionStartBalance or 0))
+    local currentNum = ParseMoney(currentMoney)
+    local startNum   = SessionStartBalance or 0
+    local profitNum  = currentNum - startNum
 
     local embed = {
         title = "🎰 Auto Roll 30-Min Report",
@@ -428,7 +456,7 @@ local function SendAutoReport()
         color = 5763719,
         fields = {
             {name="📊 Stats", value="Rolls: **"..TotalRolls.."**\nBought: **"..TotalBought.."**\nHit Rate: **"..hpm.."%**", inline=false},
-            {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**\nBefore: "..tostring(SessionStartBalance).."\nCurrent: "..currentMoney.."\nProfit: +"..tostring(profit), inline=false},
+            {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**\nBefore: **"..FormatMoney(startNum).."**\nCurrent: **"..currentMoney.."**\nProfit: **"..(profitNum >= 0 and "+" or "")..FormatMoney(profitNum).."**", inline=false},
             {name="✨ Rarity Bought", value=rarityBoughtText, inline=false},
             {name="🍀 Lucky Rate", value="2x: **"..HourlyLucky.clover2.."** ("..math.floor((HourlyLucky.clover2/totalR)*100).."%)\n4x: **"..HourlyLucky.clover4.."** ("..math.floor((HourlyLucky.clover4/totalR)*100).."%)\n8x: **"..HourlyLucky.clover8.."** ("..math.floor((HourlyLucky.clover8/totalR)*100).."%)\n16x: **"..HourlyLucky.clover16.."** ("..math.floor((HourlyLucky.clover16/totalR)*100).."%)\nJackpot: **"..HourlyLucky.jackpot.."** ("..math.floor((HourlyLucky.jackpot/totalR)*100).."%)", inline=false},
             {name="🎁 Top Seeds", value=topSeedsText, inline=false},
@@ -1936,7 +1964,7 @@ if Running and not _G.AutoRollResumed then
         runBtn.BackgroundColor3 = C.red
         statusDot.TextColor3 = C.green
         addLog("⚡ Auto Resume Aktif!", C.gold)
-                SessionStartBalance = tonumber((GetPlayerMoney() or "0"):gsub("[^0-9]", "")) or 0
+                SessionStartBalance = ParseMoney(GetPlayerMoney())
         task.spawn(RunLoop)
     end)
 end
@@ -1947,6 +1975,7 @@ runBtn.MouseButton1Click:Connect(function()
         runBtn.Text             = "⏹  Stop"
         runBtn.BackgroundColor3 = C.red
         statusDot.TextColor3    = C.green
+        SessionStartBalance     = ParseMoney(GetPlayerMoney())
         task.spawn(RunLoop)
     else
         runBtn.Text             = "▶  Start Auto Roll"
