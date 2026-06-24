@@ -417,21 +417,22 @@ local function SendAutoReport()
     end
     rarityRolledText = (rarityRolledText ~= "") and rarityRolledText or "None"
     
+    local totalR = math.max(TotalRolls, 1)
+    local currentMoney = GetPlayerMoney()
+    local currentNum = tonumber((currentMoney or "0"):gsub("[^0-9]", "")) or 0
+    local profit = math.max(0, currentNum - (SessionStartBalance or 0))
+
     local embed = {
         title = "🎰 Auto Roll 30-Min Report",
         description = "Session Progress Update",
         color = 5763719,
         fields = {
             {name="📊 Stats", value="Rolls: **"..TotalRolls.."**\nBought: **"..TotalBought.."**\nHit Rate: **"..hpm.."%**", inline=false},
-            {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**", inline=false},
+            {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**\nBefore: "..tostring(SessionStartBalance).."\nCurrent: "..currentMoney.."\nProfit: +"..tostring(profit), inline=false},
             {name="✨ Rarity Bought", value=rarityBoughtText, inline=false},
-            {name="💰 Earnings", value="Before: "..tostring(SessionStartBalance).."\nCurrent: "..GetPlayerMoney(), inline=false},
             {name="🌟 Rarity Rolled", value=rarityRolledText, inline=false},
-            
-            {name="💰 Earnings", value="Before: "..tostring(SessionStartBalance).."\nCurrent: "..GetPlayerMoney().."\nProfit: +"..tostring(math.max(0, tonumber((GetPlayerMoney() or "0"):gsub("[^0-9]", "")) or 0) - (SessionStartBalance or 0)), inline=false},
-            {name="🍀 Lucky Rate", value="2x: "..math.floor((HourlyLucky.clover2/(TotalRolls+1))*100).."%\n4x: "..math.floor((HourlyLucky.clover4/(TotalRolls+1))*100).."%\n8x: "..math.floor((HourlyLucky.clover8/(TotalRolls+1))*100).."%\n16x: "..math.floor((HourlyLucky.clover16/(TotalRolls+1))*100).."%", inline=false},
+            {name="🍀 Lucky Rate", value="2x: **"..HourlyLucky.clover2.."** ("..math.floor((HourlyLucky.clover2/totalR)*100).."%)\n4x: **"..HourlyLucky.clover4.."** ("..math.floor((HourlyLucky.clover4/totalR)*100).."%)\n8x: **"..HourlyLucky.clover8.."** ("..math.floor((HourlyLucky.clover8/totalR)*100).."%)\n16x: **"..HourlyLucky.clover16.."** ("..math.floor((HourlyLucky.clover16/totalR)*100).."%)\nJackpot: **"..HourlyLucky.jackpot.."** ("..math.floor((HourlyLucky.jackpot/totalR)*100).."%)", inline=false},
             {name="🎁 Top Seeds", value=topSeedsText, inline=false},
-            {name="🍀 Lucky Rate", value="2x: "..math.floor((HourlyLucky.clover2/(math.max(TotalRolls,1)))*100).."%\n4x: "..math.floor((HourlyLucky.clover4/(math.max(TotalRolls,1)))*100).."%\n8x: "..math.floor((HourlyLucky.clover8/(math.max(TotalRolls,1)))*100).."%\n16x: "..math.floor((HourlyLucky.clover16/(math.max(TotalRolls,1)))*100).."%\nJackpot: "..math.floor((HourlyLucky.jackpot/(math.max(TotalRolls,1)))*100).."%", inline=false},
         },
         footer = {text = "👤 "..Player.Name.." • Auto Roll • Report every 30min"},
         timestamp = DateTime.now():ToIsoDate()
@@ -1831,18 +1832,7 @@ local function RunLoop()
         -- Roll
         local ok, _ = FirePrompt(rollPrompt)
         if ok then
-            
-        -- Detect lucky clover
-        local bonusObj = FindBonusObject()
-        if bonusObj then
-            if bonusObj == "2xClover" then HourlyLucky.clover2 = HourlyLucky.clover2 + 1
-            elseif bonusObj == "4xClover" then HourlyLucky.clover4 = HourlyLucky.clover4 + 1
-            elseif bonusObj == "8xClover" then HourlyLucky.clover8 = HourlyLucky.clover8 + 1
-            elseif bonusObj == "16xClover" then HourlyLucky.clover16 = HourlyLucky.clover16 + 1
-            elseif bonusObj == "Jackpot" then HourlyLucky.jackpot = HourlyLucky.jackpot + 1 end
-        end
-
-        TotalRolls = TotalRolls + 1
+            TotalRolls = TotalRolls + 1
             statRolls.Text = tostring(TotalRolls)
             addLog("Roll #" .. TotalRolls, C.muted)
         else
@@ -1891,6 +1881,13 @@ local function RunLoop()
 
         if bonusDetected then
             -- ── LUCK MODE ──
+            -- Track HourlyLucky untuk webhook report
+            if bonusDetected == "2xClover" then HourlyLucky.clover2 = HourlyLucky.clover2 + 1
+            elseif bonusDetected == "4xClover" then HourlyLucky.clover4 = HourlyLucky.clover4 + 1
+            elseif bonusDetected == "8xClover" then HourlyLucky.clover8 = HourlyLucky.clover8 + 1
+            elseif bonusDetected == "16xClover" then HourlyLucky.clover16 = HourlyLucky.clover16 + 1
+            elseif bonusDetected == "Jackpot" or bonusDetected == "jackpot" then HourlyLucky.jackpot = HourlyLucky.jackpot + 1 end
+
             addLog("🍀 LUCK: " .. bonusDetected .. "...", C.gold)
             local finalTier = bonusDetected
 
