@@ -202,18 +202,18 @@ local function GetRarityEmoji(rarity)
 end
 
 local RARE_ITEMS = {
-    ["Seraphim Spire"] = "<@&1519037882247938088>",
-    ["Aether Coil"]   = "<@&1519037882247938088>",
-    ["Starlight Camellia"]  = "<@&1519037882247938088>"
+    ["seraphimspire"] = "<@&1519037882247938088>",
+    ["Aethercoil"]     = "<@&1519037882247938088>",
+    ["starlightcamellia"] = "<@&1519037882247938088>",
 }
 
 local function GetEmoji(name)
     local lower = name:lower()
     if lower:find("mammoth")        then return "<:Mammoth:1514891081509113946>"
     elseif lower:find("hydra")      then return "<:Hydra:1514891118180044821>"
-    elseif lower:find("Aether Coil") then return "<:Aethercoil:1519032981463765002>"
-    elseif lower:find("Seraphim Spire") then return "<:SeraphimSpire:1519033036597891215>"
-    elseif lower:find("Starligh Camellia")  then return "<:StarlightCamellia:1519033086845648916>"
+    elseif lower:find("aethercoil") or lower:find("aether coil") then return "<:Aethercoil:1519032981463765002>"
+    elseif lower:find("seraphim spire") or lower:find("seraphimspire") then return "<:SeraphimSpire:1519033036597891215>"
+    elseif lower:find("starlight camellia") or lower:find("starlightcamellia") then return "<:StarlightCamellia:1519033086845648916>"
     elseif lower:find("rainbow spray") then return "<:Rainbow:1514892436747321394>"
     elseif lower:find("cosmic spray")  then return "<:Cosmic:1514892463695859812>"
     elseif lower:find("bubblegum spray") then return "<:Bubblegum:1514892495920824320>"
@@ -430,7 +430,6 @@ local function SendAutoReport()
             {name="📊 Stats", value="Rolls: **"..TotalRolls.."**\nBought: **"..TotalBought.."**\nHit Rate: **"..hpm.."%**", inline=false},
             {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**\nBefore: "..tostring(SessionStartBalance).."\nCurrent: "..currentMoney.."\nProfit: +"..tostring(profit), inline=false},
             {name="✨ Rarity Bought", value=rarityBoughtText, inline=false},
-            {name="🌟 Rarity Rolled", value=rarityRolledText, inline=false},
             {name="🍀 Lucky Rate", value="2x: **"..HourlyLucky.clover2.."** ("..math.floor((HourlyLucky.clover2/totalR)*100).."%)\n4x: **"..HourlyLucky.clover4.."** ("..math.floor((HourlyLucky.clover4/totalR)*100).."%)\n8x: **"..HourlyLucky.clover8.."** ("..math.floor((HourlyLucky.clover8/totalR)*100).."%)\n16x: **"..HourlyLucky.clover16.."** ("..math.floor((HourlyLucky.clover16/totalR)*100).."%)\nJackpot: **"..HourlyLucky.jackpot.."** ("..math.floor((HourlyLucky.jackpot/totalR)*100).."%)", inline=false},
             {name="🎁 Top Seeds", value=topSeedsText, inline=false},
         },
@@ -538,30 +537,6 @@ local function SendHourlyReport()
     if #otherLines > 0 then table.insert(sections, "\n📦 __**Others**__\n"..table.concat(otherLines, "\n")) end
     if #gearLines == 0 and #petLines == 0 and #seedLines == 0 and #otherLines == 0 then
         table.insert(sections, "\n_No items obtained in the last hour._")
-    end
-
-    -- Rarity breakdown dari hasil roll
-    local rarityOrder = {
-        "Eternal","Celestial","Transcended","Exotic","Divine",
-        "Prismatic","Secret","Legendary","Epic","Rare","Uncommon","Common"
-    }
-    local rarityLines = {}
-    for _, rName in ipairs(rarityOrder) do
-        local count = HourlyRarityRolled[rName]
-        if count and count > 0 then
-            table.insert(rarityLines, GetRarityEmoji(rName).." **"..rName.."** `"..count.."x`")
-        end
-    end
-    -- Rarity yang tidak ada di order list (jaga-jaga nama baru)
-    for rName, count in pairs(HourlyRarityRolled) do
-        local found = false
-        for _, o in ipairs(rarityOrder) do if o == rName then found = true break end end
-        if not found and count > 0 then
-            table.insert(rarityLines, GetRarityEmoji(rName).." **"..rName.."** `"..count.."x`")
-        end
-    end
-    if #rarityLines > 0 then
-        table.insert(sections, "\n🎲 __**Rarity Rolled**__\n"..table.concat(rarityLines, "  |  "))
     end
 
     DoRequest({ embeds = {{
