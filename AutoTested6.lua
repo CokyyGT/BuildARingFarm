@@ -392,7 +392,6 @@ end
 --    30-MINUTE AUTO REPORT (Rich Embed)
 -- ══════════════════════════════════════
 local lastReportTime = os.time()
-local lastHourlyTime = os.time()
 
 -- Parse money string dengan suffix (e.g. "$3.34Sp" → number)
 local function ParseMoney(str)
@@ -458,39 +457,35 @@ local function SendAutoReport()
         color = 5763719,
         fields = {
             {name="📊 Stats", value="Rolls: **"..TotalRolls.."**\nBought: **"..TotalBought.."**\nHit Rate: **"..hpm.."%**\nUptime: **"..uptime.."**\nTime: **"..GetWIB().."**\nPing: **"..GetPingStatus().."**", inline=false},
-            {name="💰 Earnings", value="Uptime: **"..uptime.."**\nTime: **"..GetWIB().."**\nBefore: **"..FormatMoney(startNum).."**\nCurrent: **"..currentMoney.."**\nProfit: **"..(profitNum >= 0 and "+" or "")..FormatMoney(profitNum).."**", inline=false},
+            {name="💰 Earnings", value="Before: **"..FormatMoney(startNum).."**\nCurrent: **"..currentMoney.."**\nProfit: **"..(profitNum >= 0 and "+" or "")..FormatMoney(profitNum).."**", inline=false},
             {name="✨ Rarity Bought", value=rarityBoughtText, inline=false},
-            {name="🍀 Lucky Rate", value="2x: **"..HourlyLucky.clover2.."** ("..math.floor((HourlyLucky.clover2/totalR)*100).."%)\n4x: **"..HourlyLucky.clover4.."** ("..math.floor((HourlyLucky.clover4/totalR)*100).."%)\n8x: **"..HourlyLucky.clover8.."** ("..math.floor((HourlyLucky.clover8/totalR)*100).."%)\n16x: **"..HourlyLucky.clover16.."** ("..math.floor((HourlyLucky.clover16/totalR)*100).."%)\nJackpot: **"..HourlyLucky.jackpot.."** ("..math.floor((HourlyLucky.jackpot/totalR)*100).."%)", inline=false},
         },
         footer = {text = "👤 "..Player.Name.." • Auto Roll • Report every 30min"},
         timestamp = DateTime.now():ToIsoDate()
     }
     
-    DoRequest({embeds = {embed}})
+    pcall(function()
+        Request({
+            Url = WEBHOOK_URL,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = HttpService:JSONEncode({embeds = {embed}})
+        })
+    end)
 end
 
--- Auto-report every 30 minutes
+-- Auto-report every 30 minutes (30min sends FIRST, then 1hour)
 task.spawn(function()
     while true do
         task.wait(1)
-        if Running and WEBHOOK_ENABLED and WEBHOOK_URL ~= "" then
-            local now = os.time()
-            local is30min = now - lastReportTime >= 1800
-            local isHourly = now - lastHourlyTime >= 3600
-
-            -- 30min SELALU duluan sebelum hourly (biar data ga ke-reset duluan)
-            if is30min then
-                SendAutoReport()
-                lastReportTime = now
-            end
-            if isHourly then
-                SendHourlyReport()
-                lastHourlyTime = now
-                lastReportTime = now  -- reset 30min juga biar ga double-kirim
-            end
+        if Running and os.time() - lastReportTime >= 1800 then  -- 1800 = 30 min
+            SendAutoReport()
+            lastReportTime = os.time()
+            task.wait(2)  -- Small delay biar 1-hour ga langsung trigger
         end
     end
 end)
+
 
 local function SendRareAlert(itemName, amount)
     if not WEBHOOK_URL or WEBHOOK_URL == "" then return end  -- Only check webhook, not toggle
@@ -656,6 +651,11 @@ task.spawn(function()
     Player.CharacterAdded:Connect(ConnectChar)
     -- Scan berkala
     while true do task.wait(2); ScanInventory() end
+end)
+
+-- Hourly report
+task.spawn(function()
+    while task.wait(3600) do SendHourlyReport() end
 end)
 
 -- ══════════════════════════════════════
@@ -1974,8 +1974,7 @@ runBtn.MouseButton1Click:Connect(function()
         runBtn.BackgroundColor3 = C.red
         statusDot.TextColor3    = C.green
         SessionStartBalance     = ParseMoney(GetPlayerMoney())
-        lastReportTime          = os.time()
-        lastHourlyTime          = os.time()
+        lastReportTime          = os.time()  -- Reset 30-min counter
         task.spawn(RunLoop)
     else
         runBtn.Text             = "▶  Start Auto Roll"
