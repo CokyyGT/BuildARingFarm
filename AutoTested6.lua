@@ -474,14 +474,13 @@ local function SendAutoReport()
     end)
 end
 
--- Auto-report every 30 minutes (30min sends FIRST, then 1hour)
+-- Auto-report every 30 minutes
 task.spawn(function()
     while true do
         task.wait(1)
         if Running and os.time() - lastReportTime >= 1800 then  -- 1800 = 30 min
             SendAutoReport()
             lastReportTime = os.time()
-            task.wait(2)  -- Small delay biar 1-hour ga langsung trigger
         end
     end
 end)
