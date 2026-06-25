@@ -464,7 +464,7 @@ end
 task.spawn(function()
     while true do
         task.wait(1)
-        if Running and os.time() - lastReportTime >= 1800 then  -- 1800 = 30 min
+        if Running and os.time() - lastReportTime >= 1790 then  -- 1800 = 30 min
             SendAutoReport()
             lastReportTime = os.time()
         end
