@@ -207,6 +207,8 @@ local RARE_ITEMS = {
     ["Starlight"] = "<@&1519037882247938088>"
 }
 
+local RecentRareAlerts = {}  -- Track (itemName, amount) combo to allow duplicates with different amounts
+
 local function GetEmoji(name)
     local lower = name:lower()
     -- Check specific items FIRST (before generic matches)
@@ -464,7 +466,7 @@ end
 task.spawn(function()
     while true do
         task.wait(1)
-        if Running and os.time() - lastReportTime >= 1790 then  -- 1800 = 30 min
+        if Running and os.time() - lastReportTime >= 1800 then  -- 1800 = 30 min
             SendAutoReport()
             lastReportTime = os.time()
         end
@@ -473,6 +475,14 @@ end)
 
 
 local function SendRareAlert(itemName, amount)
+    -- Track by (itemName, amount) combo - allow same item with different amounts
+    local alertKey = itemName .. "_" .. amount
+    local now = os.time()
+    if RecentRareAlerts[alertKey] and (now - RecentRareAlerts[alertKey]) < 2 then
+        return  -- Skip only if exact same item+amount within 2 seconds
+    end
+    RecentRareAlerts[alertKey] = now
+    
     local lower = itemName:lower()
     local mention = nil
     for keyword, role in pairs(RARE_ITEMS) do
@@ -499,7 +509,15 @@ local function QueueItem(name, amount)
     elseif lower:find("lvl") or lower:find("mammoth") or lower:find("hydra") then HourlyPet[name] = (HourlyPet[name] or 0) + amount
     elseif lower:find("spray") or lower:find("treat") or lower:find("fertilizer") then HourlyGear[name] = (HourlyGear[name] or 0) + amount
     else HourlyOther[name] = (HourlyOther[name] or 0) + amount end
-    SendRareAlert(name, amount)
+    
+    -- Only send rare alert if item is actually rare
+    for keyword, role in pairs(RARE_ITEMS) do
+        if lower:find(keyword:lower()) then
+            SendRareAlert(name, amount)
+            break
+        end
+    end
+    
     if Sending then return end
     Sending = true
     task.delay(2, FlushWebhook)
