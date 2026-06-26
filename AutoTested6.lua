@@ -501,7 +501,13 @@ local function SendRareAlert(itemName, amount)
     })
 end
 
+local FrameProcessed = {}  -- Reset each frame to prevent double-processing same item
+
 local function QueueItem(name, amount)
+    -- Skip if same item already processed this frame
+    if FrameProcessed[name] then return end
+    FrameProcessed[name] = true
+    
     local lower = name:lower()
     PendingGain[name] = (PendingGain[name] or 0) + amount
     HourlyTotal = HourlyTotal + amount
@@ -522,6 +528,11 @@ local function QueueItem(name, amount)
     Sending = true
     task.delay(2, FlushWebhook)
 end
+
+-- Reset frame tracking each frame
+game:GetService("RunService").Heartbeat:Connect(function()
+    FrameProcessed = {}
+end)
 
 local function ScanInventory()
     ScanQueued = false
