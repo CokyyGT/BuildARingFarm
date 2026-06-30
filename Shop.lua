@@ -12,14 +12,15 @@ local ITEM_TAGS={
 	["Bubblegum Spray"] ="<@&1515089097314537522>",
 	["Rainbow Spray"]   ="<@&1515088969455636572>",
 	["Cosmic Spray"]   ="<@&1515091681324564480>",
-	["LegendaryEgg"]   ="<@&1515395549191475310>"
+	["LegendaryEgg"]   ="<@&1515395549191475310>",
+	["SecretEgg"]  ="<@&1521400670161211513>",
 }
 
 local PG=Player:WaitForChild("PlayerGui")
 local GS=PG:WaitForChild("MainUI"):WaitForChild("Menus"):WaitForChild("GearShopFrame")
 local SF=GS:WaitForChild("ScrollingFrame")
 local RT=GS:WaitForChild("RestockTimer")
-local EGG_EMOJI={CommonEgg="<:Common:1514990825715798136>",RareEgg="<:rare:1514990743436136550>",EpicEgg="<:epic:1514990936675848273>",LegendaryEgg="<:Legendary:1515432727069851811>"}
+local EGG_EMOJI={CommonEgg="<:Common:1514990825715798136>",RareEgg="<:rare:1514990743436136550>",EpicEgg="<:epic:1514990936675848273>",LegendaryEgg="<:Legendary:1515432727069851811>",SecretEgg="<:egg:>"}
 local START=os.time()
 local RestockCount=0
 
@@ -71,6 +72,7 @@ local EGG_WHITELIST={
 	["RareEgg"]=true,
 	["EpicEgg"]=true,
 	["LegendaryEgg"]=true,
+	["SecretEgg"]=true,
 }
 
 local function scanEggs()
